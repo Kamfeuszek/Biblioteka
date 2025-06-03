@@ -13,6 +13,13 @@ public class Książka {
         this.status = status;
     }
 
+    public Książka(String tytul, String autor, int rok, String status) {
+        this.tytul = tytul;
+        this.autor = autor;
+        this.rok = rok;
+        this.status = status;
+    }
+
     public int getId() {
         return id;
     }

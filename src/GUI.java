@@ -23,17 +23,22 @@ public class GUI {
     private JLabel autorLabel;
     private JLabel rokLabel;
     private static Biblioteka biblioteka;
-    private static Czytelnicy czytelnicy;
+    private static int selectedCzytelnik;
+    private static boolean widokCzytelnikow = false;
+    private static boolean widokKsiazek = false;
 
     public GUI() throws FileNotFoundException {
-        if(biblioteka != null) {
+        if(biblioteka == null) {
+            return;
+        }
+        if(widokKsiazek) {
             DefaultTableModel model = new DefaultTableModel();
             model.addColumn("ID");
             model.addColumn("Tytuł");
             model.addColumn("Autor");
             model.addColumn("Rok");
             model.addColumn("Status");
-            for (int i = 0; i < biblioteka.getSize(); i++) {
+            for (int i = 0; i < biblioteka.getKsiazkaSize(); i++) {
                 Książka k1 = biblioteka.getKsiazka(i);
                 model.addRow(new Object[]{k1.getId(), k1.getTytul(), k1.getAutor(), k1.getRok(), k1.getStatus()});
             }
@@ -48,10 +53,10 @@ public class GUI {
                     String tytul = tytulField.getText().toString().trim();
                     String autor = autorField.getText().toString().trim();
                     int rok = Integer.parseInt(rokField.getText().toString().trim());
-                    Książka k1 = new Książka(biblioteka.getSize(), tytul, autor, rok, "Dostępna");
-                    model.addRow(new Object[]{k1.getId(), k1.getTytul(), k1.getAutor(), k1.getRok(), k1.getStatus()});
+                    Książka k1 = new Książka(tytul, autor, rok, "Dostępna");
                     try {
                         biblioteka.addKsiazka(k1);
+                        model.addRow(new Object[]{k1.getId(), k1.getTytul(), k1.getAutor(), k1.getRok(), k1.getStatus()});
                     } catch (IOException ex) {
                         throw new RuntimeException(ex);
                     }
@@ -64,7 +69,7 @@ public class GUI {
                     for (int i = 0; i < model.getRowCount(); ) {
                         model.removeRow(i);
                     }
-                    for (int i = 0; i < biblioteka.getSize(); i++) {
+                    for (int i = 0; i < biblioteka.getKsiazkaSize(); i++) {
                         Książka k1 = biblioteka.getKsiazka(i);
                         if (k1.getTytul().equals(autorTytul) || k1.getAutor().equals(autorTytul)) {
                             model.addRow(new Object[]{k1.getId(), k1.getTytul(), k1.getAutor(), k1.getRok(), k1.getStatus()});
@@ -75,12 +80,15 @@ public class GUI {
             wypożyczZwrotButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    if (selectedCzytelnik == 0) {
+                        return;
+                    }
                     if (biblioteka.getKsiazka(jTable.getSelectedRow()).getStatus().equals("Dostępna")) {
-                        biblioteka.getKsiazka(jTable.getSelectedRow()).setStatus("Wypożyczona");
                         model.setValueAt("Wypożyczona", jTable.getSelectedRow(), 4);
-                    } else {
-                        biblioteka.getKsiazka(jTable.getSelectedRow()).setStatus("Dostępna");
+                        biblioteka.changeKsiazkaStatusFromAvailable(selectedCzytelnik, jTable.getSelectedRow());
+                    } else if (biblioteka.getKsiazka(jTable.getSelectedRow()).getStatus().equals("Wypożyczona") && selectedCzytelnik == biblioteka.getWypozyczenia(jTable.getSelectedRow()).getCzytelnik_ID()) {
                         model.setValueAt("Dostępna", jTable.getSelectedRow(), 4);
+                        biblioteka.changeKsiazkaStatusFromBorrowed(selectedCzytelnik, jTable.getSelectedRow());
                     }
                 }
             });
@@ -102,26 +110,112 @@ public class GUI {
                     for (int i = 0; i < model.getRowCount(); ) {
                         model.removeRow(i);
                     }
-                    for (int i = 0; i < biblioteka.getSize(); i++) {
+                    for (int i = 0; i < biblioteka.getKsiazkaSize(); i++) {
                         Książka k1 = biblioteka.getKsiazka(i);
                         model.addRow(new Object[]{k1.getId(), k1.getTytul(), k1.getAutor(), k1.getRok(), k1.getStatus()});
                     }
                 }
             });
         }
-        if(czytelnicy != null) {
-
+        if(widokCzytelnikow) {
+            tytułLabel.setText("");
+            autorLabel.setText("Imie");
+            rokLabel.setText("Nazwisko");
+            tytulField.setVisible(false);
+            dodajKsiążkęButton.setText("Dodaj czytelnika");
+            wypożyczZwrotButton.setText("Wybierz czytelnika");
+            usuńZaznaczonąButton.setText("Usuń zaznaczonego");
             DefaultTableModel model = new DefaultTableModel();
             model.addColumn("ID");
-            model.addColumn("Imię");
+            model.addColumn("Imie");
             model.addColumn("Nazwisko");
-            model.addColumn("Wypozyczone ksiazki");
-            for (int i = 0; i < czytelnicy.getSize(); i++) {
-                Czytelnik c1 = czytelnicy.getCzytelnik(i);
-                model.addRow(new Object[]{c1.getId(), c1.getImie(), c1.getNazwisko(), c1.getWypozyczoneKsiazki()});
+            model.addColumn("ID Wypozyczonych ksiazek");
+            for (int i = 0; i < biblioteka.getCzytelnikSize(); i++) {
+                Czytelnik c1 = biblioteka.getCzytelnik(i);
+                String wypozyczoneKsiazki = "";
+                for(int j = 0; j < biblioteka.getWypozyczeniaSize(); j++) {
+                    if (c1.getId() == biblioteka.getWypozyczenia(j).getCzytelnik_ID()) {
+                        wypozyczoneKsiazki += biblioteka.getWypozyczenia(i).getKsiazka_ID() + " ";
+                    }
+                }
+                model.addRow(new Object[]{c1.getId(), c1.getImie(), c1.getNazwisko(), wypozyczoneKsiazki});
             }
             JTable jTable = new JTable(model);
             tableScrollPane.setViewportView(jTable);
+            dodajKsiążkęButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (autorField.getText().isEmpty() || rokField.getText().isEmpty()) {
+                        return;
+                    }
+                    String imie = autorField.getText().toString().trim();
+                    String nazwisko = rokField.getText().toString().trim();
+                    Czytelnik c1 = new Czytelnik(imie,nazwisko);
+                    try {
+                        biblioteka.addCzytelnik(c1);
+                        model.addRow(new Object[]{c1.getId(), c1.getImie(), c1.getNazwisko()});
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+            szukajButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    String imieNazwisko = szukajField.getText().toString().trim();
+                    for (int i = 0; i < model.getRowCount(); ) {
+                        model.removeRow(i);
+                    }
+                    for (int i = 0; i < biblioteka.getCzytelnikSize(); i++) {
+                        Czytelnik c1 = biblioteka.getCzytelnik(i);
+                        if (c1.getImie().equals(imieNazwisko) || c1.getNazwisko().equals(imieNazwisko)) {
+                            String wypozyczoneKsiazki = "";
+                            for(int j = 0; j < biblioteka.getWypozyczeniaSize(); j++) {
+                                if (c1.getId() == biblioteka.getWypozyczenia(j).getCzytelnik_ID()) {
+                                    wypozyczoneKsiazki += biblioteka.getWypozyczenia(i).getKsiazka_ID() + " ";
+                                }
+                            }
+                            model.addRow(new Object[]{c1.getId(), c1.getImie(), c1.getNazwisko(), wypozyczoneKsiazki});
+                        }
+                    }
+                }
+            });
+            wypożyczZwrotButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    selectedCzytelnik = biblioteka.getCzytelnik(jTable.getSelectedRow()).getId();
+                }
+            });
+            usuńZaznaczonąButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    try {
+                        biblioteka.removeCzytelnik(jTable.getSelectedRow());
+                        model.removeRow(jTable.getSelectedRow());
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+            wyczyśćButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    szukajField.setText("");
+                    for (int i = 0; i < model.getRowCount(); ) {
+                        model.removeRow(i);
+                    }
+                    for (int i = 0; i < biblioteka.getCzytelnikSize(); i++) {
+                        Czytelnik c1 = biblioteka.getCzytelnik(i);
+                        String wypozyczoneKsiazki = "";
+                        for(int j = 0; j < biblioteka.getWypozyczeniaSize(); j++) {
+                            if (c1.getId() == biblioteka.getWypozyczenia(j).getCzytelnik_ID()) {
+                                wypozyczoneKsiazki += biblioteka.getWypozyczenia(i).getKsiazka_ID() + " ";
+                            }
+                        }
+                        model.addRow(new Object[]{c1.getId(), c1.getImie(), c1.getNazwisko(), wypozyczoneKsiazki});
+                    }
+                }
+            });
         }
     }
 
@@ -131,19 +225,14 @@ public class GUI {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JMenuBar jMenuBar = new JMenuBar();
         JMenu jMenu = new JMenu("Plik");
-        jMenu.add(new AbstractAction("Otwórz bibliotekę") {
+        jMenu.add(new AbstractAction("Otwórz bazę danych") {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(czytelnicy != null) {
-                    czytelnicy = null;
+                if(biblioteka != null) {
+                    return;
                 }
-                FileDialog fd = new FileDialog(frame, "Wybierz plik z danymi", FileDialog.LOAD);
-                fd.setVisible(true);
-                try {
-                    biblioteka = new Biblioteka(fd.getDirectory(), fd.getFile());
-                } catch (FileNotFoundException ex) {
-                    throw new RuntimeException(ex);
-                }
+                biblioteka = new Biblioteka();
+                widokKsiazek = true;
                 try {
                     frame.setContentPane(new GUI().main);
                     frame.pack();
@@ -153,34 +242,30 @@ public class GUI {
                 }
             }
         });
-        jMenu.add(new AbstractAction("Zapisz bibliotekę") {
+        jMenu.add(new AbstractAction("Zapisz bazę danych") {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (biblioteka == null) {
                     return;
                 }
-                FileDialog fd = new FileDialog(frame, "Wybierz plik do zapisu danych", FileDialog.SAVE);
-                fd.setVisible(true);
                 try {
-                    biblioteka.updateKsiazka(fd.getDirectory(), fd.getFile());
+                    biblioteka.updateDatabase();
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
             }
         });
-        jMenu.add(new AbstractAction("Otwórz czytelników") {
+        jMenu.add(new AbstractAction("Przełącz na widok czytelników") {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(biblioteka != null) {
-                    biblioteka = null;
+                if (biblioteka == null) {
+                    return;
                 }
-                FileDialog fd = new FileDialog(frame, "Wybierz plik z danymi czytelnikow", FileDialog.LOAD);
-                fd.setVisible(true);
-                try {
-                    czytelnicy = new Czytelnicy(fd.getDirectory(), fd.getFile());
-                } catch (FileNotFoundException ex) {
-                    throw new RuntimeException(ex);
+                if(widokCzytelnikow) {
+                    return;
                 }
+                widokKsiazek = false;
+                widokCzytelnikow = true;
                 try {
                     frame.setContentPane(new GUI().main);
                     frame.pack();
@@ -190,17 +275,22 @@ public class GUI {
                 }
             }
         });
-        jMenu.add(new AbstractAction("Zapisz czytelników") {
+        jMenu.add(new AbstractAction("Przełącz na widok książek") {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(czytelnicy == null) {
+                if (biblioteka == null) {
                     return;
                 }
-                FileDialog fd = new FileDialog(frame, "Wybierz plik do zapisu danych czytelnikow", FileDialog.SAVE);
-                fd.setVisible(true);
+                if(widokKsiazek) {
+                    return;
+                }
+                widokKsiazek = true;
+                widokCzytelnikow = false;
                 try {
-                    czytelnicy.updateCzytelnicy(fd.getDirectory(), fd.getFile());
-                } catch (IOException ex) {
+                    frame.setContentPane(new GUI().main);
+                    frame.pack();
+                    frame.setVisible(true);
+                } catch (FileNotFoundException ex) {
                     throw new RuntimeException(ex);
                 }
             }

@@ -4,13 +4,16 @@ public class Czytelnik {
     private int id;
     private String imie;
     private String nazwisko;
-    private WypozyczoneKsiazki wypozyczoneKsiazki;
 
-    public Czytelnik(int id, String imie, String nazwisko, WypozyczoneKsiazki wypozyczoneKsiazki) {
+    public Czytelnik(int id, String imie, String nazwisko) {
         this.id = id;
         this.imie = imie;
         this.nazwisko = nazwisko;
-        this.wypozyczoneKsiazki = wypozyczoneKsiazki;
+    }
+
+    public Czytelnik(String imie, String nazwisko) {
+        this.imie = imie;
+        this.nazwisko = nazwisko;
     }
 
     public String getImie() {
@@ -25,10 +28,6 @@ public class Czytelnik {
         return id;
     }
 
-    public WypozyczoneKsiazki getWypozyczoneKsiazki() {
-        return wypozyczoneKsiazki;
-    }
-
     public void setImie(String imie) {
         this.imie = imie;
     }
@@ -41,7 +40,4 @@ public class Czytelnik {
         this.id = id;
     }
 
-    public void setWypozyczoneKsiazki(WypozyczoneKsiazki wypozyczoneKsiazki) {
-        this.wypozyczoneKsiazki = wypozyczoneKsiazki;
-    }
 }
