@@ -24,6 +24,7 @@ public class GUI {
     private JLabel rokLabel;
     private static Biblioteka biblioteka;
     private static int selectedCzytelnik;
+    private static int[] selectedCzytelnikKsiazki;
     private static boolean widokCzytelnikow = false;
     private static boolean widokKsiazek = false;
 
@@ -86,9 +87,14 @@ public class GUI {
                     if (biblioteka.getKsiazka(jTable.getSelectedRow()).getStatus().equals("Dostępna")) {
                         model.setValueAt("Wypożyczona", jTable.getSelectedRow(), 4);
                         biblioteka.changeKsiazkaStatusFromAvailable(selectedCzytelnik, jTable.getSelectedRow());
-                    } else if (biblioteka.getKsiazka(jTable.getSelectedRow()).getStatus().equals("Wypożyczona") && selectedCzytelnik == biblioteka.getWypozyczenia(jTable.getSelectedRow()).getCzytelnik_ID()) {
-                        model.setValueAt("Dostępna", jTable.getSelectedRow(), 4);
-                        biblioteka.changeKsiazkaStatusFromBorrowed(selectedCzytelnik, jTable.getSelectedRow());
+                    } else if (biblioteka.getKsiazka(jTable.getSelectedRow()).getStatus().equals("Wypożyczona")) {
+                        for(int j = 0; j < selectedCzytelnikKsiazki.length; j++) {
+                            if (selectedCzytelnikKsiazki[j] == biblioteka.getKsiazka(jTable.getSelectedRow()).getId()) {
+                                model.setValueAt("Dostępna", jTable.getSelectedRow(), 4);
+                                biblioteka.changeKsiazkaStatusFromBorrowed(selectedCzytelnik, jTable.getSelectedRow());
+                                return;
+                            }
+                        }
                     }
                 }
             });
@@ -135,7 +141,7 @@ public class GUI {
                 String wypozyczoneKsiazki = "";
                 for(int j = 0; j < biblioteka.getWypozyczeniaSize(); j++) {
                     if (c1.getId() == biblioteka.getWypozyczenia(j).getCzytelnik_ID()) {
-                        wypozyczoneKsiazki += biblioteka.getWypozyczenia(i).getKsiazka_ID() + " ";
+                        wypozyczoneKsiazki += biblioteka.getWypozyczenia(j).getKsiazka_ID() + " ";
                     }
                 }
                 model.addRow(new Object[]{c1.getId(), c1.getImie(), c1.getNazwisko(), wypozyczoneKsiazki});
@@ -172,7 +178,7 @@ public class GUI {
                             String wypozyczoneKsiazki = "";
                             for(int j = 0; j < biblioteka.getWypozyczeniaSize(); j++) {
                                 if (c1.getId() == biblioteka.getWypozyczenia(j).getCzytelnik_ID()) {
-                                    wypozyczoneKsiazki += biblioteka.getWypozyczenia(i).getKsiazka_ID() + " ";
+                                    wypozyczoneKsiazki += biblioteka.getWypozyczenia(j).getKsiazka_ID() + " ";
                                 }
                             }
                             model.addRow(new Object[]{c1.getId(), c1.getImie(), c1.getNazwisko(), wypozyczoneKsiazki});
@@ -184,6 +190,15 @@ public class GUI {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     selectedCzytelnik = biblioteka.getCzytelnik(jTable.getSelectedRow()).getId();
+                    String wypozyczoneKsiazki = (String) model.getValueAt(jTable.getSelectedRow(), 3);
+                    selectedCzytelnikKsiazki = new int[wypozyczoneKsiazki.split(" ").length];
+                    int i = 0;
+                    for(int j = 0; j < biblioteka.getWypozyczeniaSize(); j++) {
+                        if (selectedCzytelnik == biblioteka.getWypozyczenia(j).getCzytelnik_ID()) {
+                            selectedCzytelnikKsiazki[i] = biblioteka.getWypozyczenia(j).getKsiazka_ID();
+                            i++;
+                        }
+                    }
                 }
             });
             usuńZaznaczonąButton.addActionListener(new ActionListener() {
@@ -209,7 +224,7 @@ public class GUI {
                         String wypozyczoneKsiazki = "";
                         for(int j = 0; j < biblioteka.getWypozyczeniaSize(); j++) {
                             if (c1.getId() == biblioteka.getWypozyczenia(j).getCzytelnik_ID()) {
-                                wypozyczoneKsiazki += biblioteka.getWypozyczenia(i).getKsiazka_ID() + " ";
+                                wypozyczoneKsiazki += biblioteka.getWypozyczenia(j).getKsiazka_ID() + " ";
                             }
                         }
                         model.addRow(new Object[]{c1.getId(), c1.getImie(), c1.getNazwisko(), wypozyczoneKsiazki});

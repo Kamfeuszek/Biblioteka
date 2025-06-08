@@ -70,19 +70,11 @@ public class Biblioteka {
     public void addKsiazka(Książka k1) throws IOException {
         requests += "INSERT INTO ksiazka VALUES(NULL,'" + k1.getTytul() +"','" + k1.getAutor() + "'," + k1.getRok() + ",'" + k1.getStatus() + "');";
         int id = 0;
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection connection = DriverManager.getConnection(url, user, password);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT ID FROM ksiazka");
-            while (resultSet.next()) {
-                if(resultSet.getInt(1) > id) {
-                    id = resultSet.getInt(1) + 1;
-                    k1.setId(id);
-                }
+        for(int i = 0; i < ksiazkaList.size(); i++) {
+            if(id < ksiazkaList.get(i).getId()) {
+                id = ksiazkaList.get(i).getId();
+                k1.setId(id);
             }
-        } catch (ClassNotFoundException | SQLException e) {
-            throw new RuntimeException(e);
         }
         ksiazkaList.add(k1);
     }
@@ -105,24 +97,21 @@ public class Biblioteka {
     public void changeKsiazkaStatusFromBorrowed(int czytelnik_ID, int index) {
         ksiazkaList.get(index).setStatus("Dostępna");
         requests += "DELETE FROM wypozyczenia WHERE ksiazka_ID =" + ksiazkaList.get(index).getId() + " AND czytelnik_ID=" + czytelnik_ID + ";";
-        wypozyczeniaList.remove(index);
+        for (int i = 0; i < wypozyczeniaList.size(); i++) {
+            if (wypozyczeniaList.get(i).getCzytelnik_ID() == czytelnik_ID && wypozyczeniaList.get(i).getKsiazka_ID() == ksiazkaList.get(index).getId()) {
+                wypozyczeniaList.remove(i);
+                break;
+            }
+        }
     }
     public void addCzytelnik(Czytelnik c1) throws IOException {
         requests += "INSERT INTO czytelnik VALUES(NULL,'" + c1.getImie() +"','" + c1.getNazwisko() + "');";
         int id = 0;
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection connection = DriverManager.getConnection(url, user, password);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT ID FROM czytelnik");
-            while (resultSet.next()) {
-                if(resultSet.getInt(1) > id) {
-                    id = resultSet.getInt(1) + 1;
-                    c1.setId(id);
-                }
+        for(int i = 0; i < czytelnikList.size(); i++) {
+            if(id < czytelnikList.get(i).getId()) {
+                id = czytelnikList.get(i).getId();
+                c1.setId(id);
             }
-        } catch (ClassNotFoundException | SQLException e) {
-            throw new RuntimeException(e);
         }
         czytelnikList.add(c1);
     }
